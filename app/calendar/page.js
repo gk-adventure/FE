@@ -1,6 +1,9 @@
 // app/calendar/page.js
 "use client";
 
+import TopBar from "@/components/TopBar";
+import Navbar from "@/components/NavBar";
+
 import { useState, useEffect, useRef } from "react";
 // ✨ 추가할 상태 및 더미 데이터 (CalendarPage 함수 내부 상단)
 import { useRouter } from "next/navigation";
@@ -82,13 +85,9 @@ export default function CalendarPage() {
 
   return (
     <>
+      <TopBar />
       <div className="max-w-md mx-auto">
         <div className="">
-          {/* 상단 로고 */}
-          <h1 className="text-xl font-bold text-orange-500 mb-4 p-4 pb-0">
-            🌞 티끌 모아 태산
-          </h1>
-
           {/* 예산 요약 카드 - 가로 스크롤 */}
           <div
             className="overflow-x-auto mb-6 pl-4 pr-4 scrollbar-hide"
@@ -336,6 +335,7 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
+      <Navbar />
     </>
   );
 }
