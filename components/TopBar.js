@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function TopBar() {
   return (
-    <header className="flex items-center px-4 py-4 mb-2 bg-white">
+    <header className="flex items-center px-4 py-4 bg-white">
       {/* 아이콘 */}
       <Image
         src="/images/icon.png" // public 디렉토리에 저장된 이미지 경로
