@@ -3,4 +3,36 @@
 @tailwind utilities; */
 @import "tailwindcss";
 
-/* 생략.. */
+/* 스크롤바 감추기 클래스 정의 */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE, Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+/* ✨ Tailwind 애니메이션 (글로벌 CSS 또는 tailwind.config.js에 추가) */
+.animate-slide-up {
+  @apply animate-[slide-up_0.3s_ease-out];
+}
+.animate-slide-down {
+  @apply animate-[slide-down_0.3s_ease-in];
+}
+
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes slide-down {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
