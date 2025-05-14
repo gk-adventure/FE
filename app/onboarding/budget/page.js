@@ -1,13 +1,18 @@
 "use client";
-
+import { useRouter } from "next/navigation"; // ⬅️ 추가
 import { useState } from "react";
 
 export default function WelcomePage() {
+  const router = useRouter(); // ⬅️ 추가
   const [step, setStep] = useState(1);
   const [income, setIncome] = useState("");
   const [expenses, setExpenses] = useState([{ item: "", amount: "" }]);
   const [goalAmount, setGoalAmount] = useState("");
   const [goalPeriod, setGoalPeriod] = useState("");
+  // 분석하기 클릭 시 이동
+  const handleAnalyze = () => {
+    router.push("/onboarding/budget/loading");
+  };
 
   const handleAddExpense = () => {
     setExpenses([...expenses, { item: "", amount: "" }]);
@@ -151,7 +156,7 @@ export default function WelcomePage() {
             <button style={styles.prevBtn} onClick={() => setStep(2)}>
               ← 이전
             </button>
-            <button style={styles.nextBtn}>
+            <button style={styles.nextBtn} onClick={handleAnalyze}>
               다음 &gt;
               <br />
               <small>분석하기</small>
