@@ -1,18 +1,13 @@
 "use client";
-import { useRouter } from "next/navigation"; // ⬅️ 추가
+
 import { useState } from "react";
 
 export default function WelcomePage() {
-  const router = useRouter(); // ⬅️ 추가
   const [step, setStep] = useState(1);
   const [income, setIncome] = useState("");
   const [expenses, setExpenses] = useState([{ item: "", amount: "" }]);
   const [goalAmount, setGoalAmount] = useState("");
   const [goalPeriod, setGoalPeriod] = useState("");
-  // 분석하기 클릭 시 이동
-  const handleAnalyze = () => {
-    router.push("/onboarding/budget/loading");
-  };
 
   const handleAddExpense = () => {
     setExpenses([...expenses, { item: "", amount: "" }]);
@@ -26,6 +21,50 @@ export default function WelcomePage() {
     const updated = [...expenses];
     updated[index][key] = value;
     setExpenses(updated);
+  };
+
+  const fetchBudgetCreate = async () => {
+    const fixedCosts = expenses
+      .filter((exp) => exp.item && exp.amount)
+      .map((exp) => ({
+        name: exp.item,
+        amount: Number(exp.amount),
+      }));
+
+    const body = {
+      userId: 1, // 실제 서비스에서는 로그인된 사용자 ID를 사용하세요.
+      startDate: new Date().toISOString().split("T")[0],
+      income: Number(income),
+      goalAmount: Number(goalAmount),
+      goalPeriod: goalPeriod
+        ? new Date(
+            new Date().setMonth(new Date().getMonth() + Number(goalPeriod))
+          )
+            .toISOString()
+            .split("T")[0]
+        : null,
+      fixedCosts: fixedCosts,
+    };
+
+    try {
+      const res = await fetch("/api/budget/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      console.log(JSON.stringify(body));
+      if (!res.ok) {
+        alert(data.message || "예산 등록 실패");
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+      alert("서버 오류 발생");
+    }
   };
 
   return (
@@ -156,7 +195,7 @@ export default function WelcomePage() {
             <button style={styles.prevBtn} onClick={() => setStep(2)}>
               ← 이전
             </button>
-            <button style={styles.nextBtn} onClick={handleAnalyze}>
+            <button style={styles.nextBtn} onClick={fetchBudgetCreate}>
               다음 &gt;
               <br />
               <small>분석하기</small>
