@@ -2,15 +2,14 @@
 
 import TopBar from "@/components/TopBar";
 import Navbar from "@/components/NavBar";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,43 +17,33 @@ import {
 } from "recharts";
 
 export default function ReportPage() {
-  // 현재 날짜 기준 전월 계산
   const now = new Date();
   const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1);
   const [year, setYear] = useState(prevMonth.getFullYear());
   const [month, setMonth] = useState(prevMonth.getMonth() + 1);
+  const [report, setReport] = useState(null);
+  const userId = 1; // 실제 사용자 ID로 교체 필요
+  const API_BASE_URL = "https://4264-134-75-39-23.ngrok-free.app";
 
-  // 원형 차트 데이터
-  const pieChartData = [
-    { name: "식비", value: 25 },
-    { name: "카페", value: 11 },
-    { name: "쇼핑", value: 24 },
-    { name: "기타", value: 40 },
-  ];
-
-  // ✅ '기타' 제외하고 예산 데이터 계산
-  const total = 100;
-  const used = pieChartData
-    .filter((item) => item.name !== "기타")
-    .reduce((sum, item) => sum + item.value, 0);
-  const remaining = total - used;
-  const usageRate = Math.round((used / total) * 100);
-
-  const budgetData = {
-    total,
-    used,
-    remaining,
-    usageRate,
+  const fetchReport = async () => {
+    try {
+      const queryMonth = `${year}-${month.toString().padStart(2, "0")}`;
+      const response = await fetch(
+        `${API_BASE_URL}/api/reports/userId=${userId}/month=${queryMonth}`
+      );
+      if (!response.ok) {
+        throw new Error("리포트 생성 또는 조회 실패");
+      }
+      const result = await response.json();
+      setReport({ summary: result });
+    } catch (error) {
+      console.error("리포트 조회 실패:", error);
+    }
   };
 
-  const weeklySpendingData = [
-    { name: "1주차", value: 320 },
-    { name: "2주차", value: 280 },
-    { name: "3주차", value: 340 },
-    { name: "4주차", value: 260 },
-  ];
-
-  const pieColors = ["#8fd694", "#f6b94d", "#79a8f5", "#ccc"];
+  useEffect(() => {
+    fetchReport();
+  }, [year, month]);
 
   const handlePrevMonth = () => {
     if (month === 1) {
@@ -73,6 +62,40 @@ export default function ReportPage() {
       setMonth((prev) => prev + 1);
     }
   };
+
+  const pieColors = [
+    "#8fd694",
+    "#f6b94d",
+    "#79a8f5",
+    "#ccc",
+    "#b4b4b4",
+    "#f59f9f",
+  ];
+
+  const pieChartData = report
+    ? Object.entries(report.summary.categoryBreakdown).map(([name, value]) => ({
+        name,
+        value,
+      }))
+    : [];
+
+  const budgetData = report
+    ? {
+        total: report.summary.monthBudget ?? 0,
+        used: report.summary.totalSpending ?? 0,
+        remaining:
+          (report.summary.monthBudget ?? 0) -
+          (report.summary.totalSpending ?? 0),
+        usageRate: report.summary.budgetUsageRate ?? 0,
+      }
+    : { total: 0, used: 0, remaining: 0, usageRate: 0 };
+
+  const weeklySpendingData = report?.summary?.weeklySpendingRate
+    ? report.summary.weeklySpendingRate.map((rate, i) => ({
+        name: `${i + 1}주차`,
+        value: rate,
+      }))
+    : [];
 
   return (
     <>
@@ -98,7 +121,7 @@ export default function ReportPage() {
                   data={pieChartData}
                   cx="50%"
                   cy="45%"
-                  outerRadius={100}
+                  outerRadius={90}
                   dataKey="value"
                   label={({ name, percent }) =>
                     `${name} ${(percent * 100).toFixed(0)}%`
@@ -117,6 +140,8 @@ export default function ReportPage() {
           </div>
         </section>
 
+        <div style={styles.divider}></div>
+
         <section style={styles.budgetSection}>
           <h2 style={styles.budgetTitle}>예산 대비 지출</h2>
           <div style={styles.progressBar}>
@@ -131,52 +156,51 @@ export default function ReportPage() {
           </div>
           <p>
             총 예산: -{budgetData.total.toLocaleString()}
-            <span style={styles.unit}>(만원)</span>
+            <span style={styles.unit}>(원)</span>
           </p>
           <p>
             사용 금액: -{budgetData.used.toLocaleString()}
-            <span style={styles.unit}>(만원)</span>
+            <span style={styles.unit}>(원)</span>
           </p>
           <p>
             남은 금액: -{budgetData.remaining.toLocaleString()}
-            <span style={styles.unit}>(만원)</span>
+            <span style={styles.unit}>(원)</span>
           </p>
         </section>
 
-        <section style={{ ...styles.reportSection, ...styles.budgetSection }}>
-          <h2 style={styles.budgetTitle}>분석 리포트 요약</h2>
-          <div style={styles.reportChart}>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart
-                data={weeklySpendingData}
-                margin={{ top: 10, right: 10, bottom: 10, left: 30 }}
-              >
-                <CartesianGrid
-                  vertical={false}
-                  strokeDasharray="3 3"
-                  stroke="#eee"
-                />
-                <XAxis dataKey="name" padding={{ left: 10, right: 10 }} />
-                <YAxis hide />
-                <ReferenceLine y={300} stroke="#30b769" strokeWidth={1} />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#8B4513"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <p style={styles.reportSummary}>
-            지난 달 보다 <span style={styles.highlight}>30만원</span> 더
-            사용했어요
-          </p>
-          <p style={styles.reportSubText}>
-            전체 사용 금액 중 식비의 비중이 가장 높아요!
-          </p>
-        </section>
+        <div style={styles.divider}></div>
+
+        {report && (
+          <section style={styles.reportSection}>
+            <h2 style={styles.budgetTitle}>분석 리포트 요약</h2>
+            <div style={styles.reportChart}>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={weeklySpendingData}
+                  margin={{ top: 10, right: 0, bottom: 0, left: 0 }}
+                  barSize={20}
+                  barCategoryGap="20%"
+                >
+                  <CartesianGrid
+                    stroke="#ccc"
+                    strokeDasharray="3 3"
+                    vertical
+                    horizontal
+                  />
+                  <XAxis dataKey="name" interval={0} />
+                  <YAxis
+                    domain={[0, 100]}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <ReferenceLine y={25} stroke="#f19209" strokeWidth={1} />
+                  <Bar dataKey="value" fill="#F5B56B" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <p style={styles.reportSummary}>{report.summary.patternAnalysis}</p>
+            <p style={styles.reportSubText}>{report.summary.feedback}</p>
+          </section>
+        )}
       </main>
       <Navbar />
     </>
@@ -186,21 +210,11 @@ export default function ReportPage() {
 const styles = {
   main: {
     fontFamily: "sans-serif",
-    padding: "2rem",
+    // padding: "2rem",
     background: "#fff",
     color: "#444",
     maxWidth: "480px",
     margin: "0 auto",
-  },
-  logoWrap: {
-    textAlign: "center",
-    marginBottom: "1rem",
-  },
-  logoText: {
-    fontWeight: "bold",
-  },
-  logoHighlight: {
-    color: "#79CF71",
   },
   monthNav: {
     display: "flex",
@@ -208,27 +222,28 @@ const styles = {
     alignItems: "center",
     gap: "1rem",
     marginBottom: "2rem",
+    color: "#F5B56B",
   },
   monthText: {
     fontSize: "1.8rem",
     fontWeight: "bold",
-    color: "#A3D275",
+    color: "#F5B56B",
   },
   monthArrow: {
     fontSize: "1.8rem",
     fontWeight: "bold",
-    color: "#009688",
+    color: "#F5B56B",
     background: "none",
     border: "none",
     cursor: "pointer",
   },
   budgetSection: {
-    padding: "0 0 1.5rem 0",
-    marginBottom: "2rem",
+    padding: "1.5rem 2rem",
+    // marginBottom: "2rem",
   },
   budgetTitle: {
     fontSize: "1.25rem",
-    color: "#30b769",
+    color: "#f19209",
     fontWeight: "bold",
     marginBottom: "0.5rem",
   },
@@ -241,7 +256,7 @@ const styles = {
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#67ba7c",
+    backgroundColor: "#F5B56B",
     textAlign: "center",
     color: "#fff",
     fontWeight: "bold",
@@ -252,19 +267,18 @@ const styles = {
   },
   chartSection: {
     paddingTop: "1rem",
-    paddingBottom: "1rem",
-    position: "relative",
-    zIndex: 0,
+    // paddingBottom: "1rem",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
     height: "320px",
-    marginBottom: "2rem",
+    // marginBottom: "2rem",
   },
   reportSection: {
     textAlign: "left",
     marginTop: "2rem",
+    padding: "0rem 2rem",
   },
   reportChart: {
     width: "100%",
@@ -275,19 +289,16 @@ const styles = {
   reportSummary: {
     fontSize: "1.1rem",
     fontWeight: "bold",
+    marginBottom: "0.8rem",
   },
   reportSubText: {
-    fontSize: "0.9rem",
-    color: "#333",
+    fontSize: "0.95rem",
+    color: "#444",
   },
-  highlight: {
-    color: "#30b769",
-    fontWeight: "bold",
-  },
-  footer: {
-    marginTop: "2rem",
-    textAlign: "center",
-    color: "#67ba7c",
-    fontWeight: "bold",
+  divider: {
+    width: "100vw",
+    height: "1px",
+    backgroundColor: "#ccc",
+    // margin: "2rem calc(-50vw + 50%)",
   },
 };
