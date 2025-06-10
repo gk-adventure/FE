@@ -25,7 +25,7 @@ export default function CalendarPage() {
   });
   const [calendarData, setCalendarData] = useState({});
   const router = useRouter();
-  const API_BASE_URL = "https://4264-134-75-39-23.ngrok-free.app";
+
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);
   const [isMonthOpen, setIsMonthOpen] = useState(false);
@@ -43,56 +43,30 @@ export default function CalendarPage() {
 
   useEffect(() => {
     const fetchOverview = async () => {
-      // const res = await fetch(
-      //   "https://4264-134-75-39-23.ngrok-free.app/api/home/overview?userId=1&month=2025-05"
-      // );
-      // const contentType = res.headers.get("content-type");
-      // console.log("🧾 응답 Content-Type:", contentType); // 👈 이걸 확인해보세요
-
       try {
         const res = await fetch(
-          `${API_BASE_URL}/api/home/overview?userId=${userId}&month=${format(
+          `/api/home/overview?userId=${userId}&month=${format(
             currentDate,
             "yyyy-MM"
-          )}`,
-          {
-            method: "GET", // 생략 가능하지만 명시하면 명확함
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-          }
+          )}`
         );
-        console.log("rtttt", res);
-
-        // 1️⃣ 응답 상태 체크
-        if (!res.ok) {
-          const errorData = await res.json(); // 여긴 JSON이 맞음
-          console.warn("서버에서 에러 응답 받음:", errorData);
-          throw new Error(
-            errorData?.error || "예산 데이터를 불러오지 못했습니다."
-          );
-        }
-
-        // 2️⃣ 정상 데이터 처리
+        if (!res.ok) throw new Error("예산 데이터를 불러오지 못했습니다.");
         const data = await res.json();
         setBudgetInfo({
           monthlyBudget: data.monthlyBudget,
           dailyBudget: data.dailyBudget,
           totalSpent: data.totalSpent,
         });
-
         const mapped = {};
         data.calendar.forEach((entry) => {
-          mapped[entry.date] = entry.netChange ?? 0;
+          mapped[entry.date] = entry.netChange;
         });
         setCalendarData(mapped);
       } catch (err) {
-        console.error("🔥 오류:", err);
+        console.error(err);
         alert("데이터 로딩 오류: " + err.message);
       }
     };
-
     fetchOverview();
   }, [currentDate]);
 
@@ -118,40 +92,9 @@ export default function CalendarPage() {
 
   const handleDayClick = async (key) => {
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/home/detail?userId=${userId}&date=${key}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-        }
-      );
-
+      const res = await fetch(`/api/home/detail?userId=${userId}&date=${key}`);
       if (!res.ok) throw new Error("거래 내역을 불러오지 못했습니다.");
       const data = await res.json();
-
-      // 테스트용
-      // const data = {
-      //   date: "2025-06-10",
-      //   transactions: [
-      //     {
-      //       id: 1,
-      //       saveType: 0,
-      //       category: "식비",
-      //       amount: 12000,
-      //       description: "점심식사",
-      //     },
-      //     {
-      //       id: 2,
-      //       saveType: 1,
-      //       category: "용돈",
-      //       amount: 30000,
-      //       description: "부모님이 보냄",
-      //     },
-      //   ],
-      // };
       setSelectedDay(key);
       setTransactions(data.transactions);
       setIsAnimating(false);
@@ -162,10 +105,7 @@ export default function CalendarPage() {
       alert("해당 날짜의 데이터를 불러올 수 없습니다: " + err.message);
     }
   };
-  const total = transactions.reduce(
-    (acc, cur) => acc + cur.amount * (cur.saveType === 0 ? -1 : 1),
-    0
-  );
+
   return (
     <>
       <TopBar />
@@ -338,7 +278,14 @@ export default function CalendarPage() {
                 {selectedDay?.split("-")[2]}일
               </span>
               <span className="text-sm font-medium">
-                {(total >= 0 ? "+" : "") + total.toLocaleString()}원
+                {transactions
+                  .reduce(
+                    (acc, cur) =>
+                      acc + cur.amount * (cur.type === "EXPENSE" ? -1 : 1),
+                    0
+                  )
+                  .toLocaleString()}
+                원
               </span>
             </div>
             <table className="w-full text-sm">
@@ -351,12 +298,16 @@ export default function CalendarPage() {
                     <td className="p-2 text-gray-800">{item.description}</td>
                     <td
                       className={`p-2 text-right font-semibold ${
-                        item.saveType === 0 ? "text-red-500" : "text-green-600"
+                        item.type === "EXPENSE"
+                          ? "text-red-500"
+                          : "text-green-600"
                       }`}
                     >
-                      {`${
-                        item.saveType === 0 ? "-" : "+"
-                      }${item.amount.toLocaleString()}원`}
+                      {(item.type === "EXPENSE"
+                        ? -item.amount
+                        : item.amount
+                      ).toLocaleString()}
+                      원
                     </td>
                   </tr>
                 ))}
