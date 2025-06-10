@@ -17,9 +17,31 @@ export default function WritePage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = () => {
-    alert("입력 완료!");
-    // 여기에 실제 저장 로직을 추가할 수 있습니다.
+  const handleSubmit = async () => {
+    const payload = {
+      userId: 1, // 실제 앱에서는 로그인된 사용자 ID로 대체
+      save_type: type === "지출" ? 0 : 1,
+      category: form.category,
+      amount: parseInt(form.amount),
+      date: form.date,
+      description: form.content,
+    };
+    console.log(JSON.stringify(payload));
+    try {
+      const res = await fetch("/api/transaction/manual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("입력 실패");
+
+      const data = await res.json();
+      alert(data.message || "입력 완료!");
+      setForm({ date: "", amount: "", category: "", content: "" });
+    } catch (err) {
+      alert("오류 발생: " + err.message);
+    }
   };
 
   return (

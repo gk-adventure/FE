@@ -27,7 +27,10 @@ export default function SignUpPage() {
   return (
     <main style={styles.container}>
       <div style={styles.logoSection}>
-        <div style={styles.icon}>🌱</div>
+        <div style={styles.icon}>
+          <img src="/images/icon.png" alt="로고" style={styles.iconImg} />
+        </div>
+
         <div style={styles.tagline}>
           <div>신나는 저축,</div>
           <div style={styles.taglineStrong}>돈굴이와 함께</div>
@@ -91,7 +94,7 @@ const styles = {
   },
   icon: { fontSize: "2.5rem", marginBottom: "0.5rem" },
   tagline: { textAlign: "center", fontSize: "1rem", lineHeight: "1.4" },
-  taglineStrong: { color: "#30b769", fontWeight: "bold" },
+  taglineStrong: { color: "#f19209", fontWeight: "bold" },
   title: {
     fontSize: "2rem",
     fontWeight: "bold",
@@ -114,7 +117,7 @@ const styles = {
     marginBottom: "0.5rem",
   },
   submitButton: {
-    backgroundColor: "#30b769",
+    backgroundColor: "#f19209",
     color: "#fff",
     border: "none",
     padding: "0.9rem",
