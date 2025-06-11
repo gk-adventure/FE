@@ -5,9 +5,9 @@ import Navbar from "@/components/NavBar";
 
 export default function MyPage() {
   const userInfo = {
-    name: "우르양",
-    age: 324,
-    gender: "비밀~",
+    name: "홍길동",
+    age: 25,
+    gender: "비공개",
     monthlyLimit: 1000000,
     fixedCost: 200000,
   };
@@ -17,7 +17,7 @@ export default function MyPage() {
       <TopBar />
       <div
         style={{
-          minHeight: "100dvh",
+          minHeight: "85dvh",
           backgroundColor: "#ffffff",
           fontFamily: "'Noto Sans KR', sans-serif",
           display: "flex",

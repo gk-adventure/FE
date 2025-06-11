@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import Navbar from "@/components/NavBar";
 
 export default function WritePage() {
+  const searchParams = useSearchParams();
+  const defaultDate = searchParams.get("date") || "";
+
   const [type, setType] = useState("지출");
+  const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     date: "",
     amount: "",
@@ -13,34 +18,53 @@ export default function WritePage() {
     content: "",
   });
 
+  useEffect(() => {
+    if (defaultDate) {
+      setForm((prev) => ({ ...prev, date: defaultDate }));
+    }
+  }, [defaultDate]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async () => {
     const payload = {
-      userId: 1, // 실제 앱에서는 로그인된 사용자 ID로 대체
-      save_type: type === "지출" ? 0 : 1,
+      userId: 1,
+      saveType: type === "지출" ? 0 : 1,
       category: form.category,
       amount: parseInt(form.amount),
       date: form.date,
       description: form.content,
     };
-    console.log(JSON.stringify(payload));
+
+    console.log("🚀 전송할 payload:", payload);
+
     try {
       const res = await fetch("/api/transaction/manual", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("입력 실패");
+      console.log("📦 서버 응답:", res);
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.warn("서버 에러:", errorData);
+        throw new Error(errorData?.error || "지출 내역 입력 실패");
+      }
 
       const data = await res.json();
-      alert(data.message || "입력 완료!");
+
+      setShowModal(true);
       setForm({ date: "", amount: "", category: "", content: "" });
     } catch (err) {
-      alert("오류 발생: " + err.message);
+      console.error("🔥 입력 오류:", err);
+      alert("데이터 입력 중 오류 발생: " + err.message);
     }
   };
 
@@ -48,10 +72,8 @@ export default function WritePage() {
     <>
       <TopBar />
       <div className="min-h-screen bg-white px-4 py-6">
-        {/* 카드 */}
         <div className="bg-[#FFF8F0] border border-orange-200 rounded-xl shadow-md p-6">
           <div className="flex justify-between items-start mb-4">
-            {/* 수입/지출 탭 */}
             <div className="flex bg-gray-100 rounded-full overflow-hidden shadow-inner">
               <button
                 className={`px-4 py-1.5 text-sm font-semibold transition ${
@@ -70,11 +92,9 @@ export default function WritePage() {
                 지출
               </button>
             </div>
-
             <h2 className="text-lg font-bold text-gray-800">금액 입력</h2>
           </div>
 
-          {/* 입력 폼 */}
           <div className="space-y-5">
             <div>
               <label className="block mb-1 text-sm font-medium text-gray-700">
@@ -136,7 +156,6 @@ export default function WritePage() {
             </div>
           </div>
 
-          {/* 입력 버튼 */}
           <div className="flex justify-end mt-6">
             <button
               onClick={handleSubmit}
@@ -147,6 +166,33 @@ export default function WritePage() {
           </div>
         </div>
       </div>
+
+      {/* ✅ 입력 완료 모달 (밝고 흐린 배경) */}
+      {showModal && (
+        <div
+          className="fixed inset-0 bg-white/30 backdrop-blur-sm flex justify-center items-center z-50"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-xl shadow-lg p-6 w-80 text-center"
+          >
+            <h2 className="text-lg font-bold text-orange-600 mb-2">
+              입력 완료 🎉
+            </h2>
+            <p className="text-gray-700 mb-4">
+              거래 내역이 성공적으로 저장되었습니다.
+            </p>
+            <button
+              onClick={() => setShowModal(false)}
+              className="mt-2 px-4 py-2 bg-orange-500 text-white rounded shadow hover:bg-orange-600 transition"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
       <Navbar />
     </>
   );

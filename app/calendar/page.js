@@ -11,6 +11,7 @@ import {
   getDay,
   isToday,
 } from "date-fns";
+import axios from "axios";
 
 export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState(null);
@@ -25,7 +26,7 @@ export default function CalendarPage() {
   });
   const [calendarData, setCalendarData] = useState({});
   const router = useRouter();
-  const API_BASE_URL = "https://4264-134-75-39-23.ngrok-free.app";
+  const API_BASE_URL = "http://54.180.125.184:8081";
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);
   const [isMonthOpen, setIsMonthOpen] = useState(false);
@@ -43,20 +44,14 @@ export default function CalendarPage() {
 
   useEffect(() => {
     const fetchOverview = async () => {
-      // const res = await fetch(
-      //   "https://4264-134-75-39-23.ngrok-free.app/api/home/overview?userId=1&month=2025-05"
-      // );
-      // const contentType = res.headers.get("content-type");
-      // console.log("🧾 응답 Content-Type:", contentType); // 👈 이걸 확인해보세요
-
       try {
         const res = await fetch(
-          `${API_BASE_URL}/api/home/overview?userId=${userId}&month=${format(
+          `/api/home/overview?userId=${userId}&month=${format(
             currentDate,
             "yyyy-MM"
-          )}`,
+          )}`, // ✨ 이제 /api/로 시작하는 상대 경로를 사용합니다.
           {
-            method: "GET", // 생략 가능하지만 명시하면 명확함
+            method: "GET",
             headers: {
               "Content-Type": "application/json",
               Accept: "application/json",
@@ -89,7 +84,7 @@ export default function CalendarPage() {
         setCalendarData(mapped);
       } catch (err) {
         console.error("🔥 오류:", err);
-        alert("데이터 로딩 오류: " + err.message);
+        // alert("데이터 로딩 오류: " + err.message);
       }
     };
 
@@ -108,7 +103,11 @@ export default function CalendarPage() {
 
   const handleInputPage = () => {
     setIsDetailOpen(false);
-    router.push("/input");
+    if (selectedDay) {
+      router.push(`/input?date=${selectedDay}`); // 날짜 포함하여 이동
+    } else {
+      router.push("/input"); // 날짜가 없을 경우 기본
+    }
   };
 
   const handleMonthSelect = (monthDate) => {
@@ -119,7 +118,7 @@ export default function CalendarPage() {
   const handleDayClick = async (key) => {
     try {
       const res = await fetch(
-        `${API_BASE_URL}/api/home/detail?userId=${userId}&date=${key}`,
+        `/api/transaction/daily?userId=${userId}&date=${key}`,
         {
           method: "GET",
           headers: {
@@ -129,39 +128,34 @@ export default function CalendarPage() {
         }
       );
 
-      if (!res.ok) throw new Error("거래 내역을 불러오지 못했습니다.");
+      console.log("📦 상세 조회 응답:", res);
+
+      // 응답 상태가 실패해도 드롭다운 열기
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.warn("서버에서 에러 응답 받음:", errorData);
+        throw new Error(errorData?.error || "거래 내역 없음");
+      }
+
       const data = await res.json();
 
-      // 테스트용
-      // const data = {
-      //   date: "2025-06-10",
-      //   transactions: [
-      //     {
-      //       id: 1,
-      //       saveType: 0,
-      //       category: "식비",
-      //       amount: 12000,
-      //       description: "점심식사",
-      //     },
-      //     {
-      //       id: 2,
-      //       saveType: 1,
-      //       category: "용돈",
-      //       amount: 30000,
-      //       description: "부모님이 보냄",
-      //     },
-      //   ],
-      // };
       setSelectedDay(key);
-      setTransactions(data.transactions);
+      setTransactions(data.transactions || []); // 없으면 빈 배열
       setIsAnimating(false);
       setIsDetailOpen(true);
       setTimeout(() => setFadeBg(true), 10);
     } catch (err) {
-      console.error(err);
-      alert("해당 날짜의 데이터를 불러올 수 없습니다: " + err.message);
+      setSelectedDay(key);
+      setTransactions([]); // 실패해도 빈 배열로 설정
+      setIsAnimating(false);
+      setIsDetailOpen(true);
+      setTimeout(() => setFadeBg(true), 10);
+
+      console.error("🔥 상세 데이터 로딩 오류:", err);
+      // ❌ alert 생략
     }
   };
+
   const total = transactions.reduce(
     (acc, cur) => acc + cur.amount * (cur.saveType === 0 ? -1 : 1),
     0
@@ -182,7 +176,7 @@ export default function CalendarPage() {
                 className="min-w-[140px] bg-orange-50 border border-orange-300 rounded-xl shadow-sm p-4 text-center flex-shrink-0"
               >
                 <p className="text-sm text-gray-700">{item.label}</p>
-                <p className="text-xl font-bold text-orange-600">
+                <p className="text-xl font-bold text-orange-400">
                   {item.value.toLocaleString()}{" "}
                   <span className="text-sm text-gray-400">원</span>
                 </p>
@@ -195,7 +189,7 @@ export default function CalendarPage() {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setIsMonthOpen((prev) => !prev)}
-              className="text-orange-500 font-bold text-xl flex items-center"
+              className="text-[#F19209] font-bold text-xl flex items-center"
             >
               {format(currentDate, "yyyy년 M월")} ▼
             </button>
@@ -211,8 +205,8 @@ export default function CalendarPage() {
                         onClick={() => handleMonthSelect(monthDate)}
                         className={`w-full h-8 text-sm rounded-md leading-8 ${
                           isSelectedMonth
-                            ? "border border-orange-400 text-orange-500 font-semibold"
-                            : "text-gray-700 hover:text-orange-500"
+                            ? "border border-orange-400 text-[#F19209] font-semibold"
+                            : "text-gray-700 hover:text-[#F19209]"
                         }`}
                       >
                         {format(monthDate, "M월")}
@@ -224,7 +218,7 @@ export default function CalendarPage() {
             )}
           </div>
 
-          <div className="space-x-8 text-orange-500 text-xl font-bold">
+          <div className="space-x-8 text-[#F19209] text-xl font-bold">
             <button
               onClick={() =>
                 setCurrentDate(
@@ -284,7 +278,7 @@ export default function CalendarPage() {
                   <span
                     className={`text-xs ${
                       isTodayCell
-                        ? "bg-orange-500 text-white font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                        ? "bg-[#F19209] text-white font-bold w-5 h-5 rounded-full flex items-center justify-center"
                         : "text-gray-800"
                     }`}
                   >
@@ -310,6 +304,14 @@ export default function CalendarPage() {
             );
           })}
         </div>
+        <div className="absolute bottom-[120px] right-[18px] z-50">
+          <button
+            onClick={handleInputPage}
+            className="bg-[#F19209] text-white font-semibold px-4 py-2 rounded shadow"
+          >
+            + 내역 입력
+          </button>
+        </div>
       </div>
 
       {(isDetailOpen || isAnimating) && (
@@ -333,7 +335,7 @@ export default function CalendarPage() {
               isAnimating ? "animate-slide-down" : "animate-slide-up"
             } touch-pan-y`}
           >
-            <div className="p-4 border-b bg-orange-500 text-white flex justify-between items-center">
+            <div className="p-4 border-b bg-[#F19209] text-white flex justify-between items-center">
               <span className="text-lg font-bold">
                 {selectedDay?.split("-")[2]}일
               </span>
@@ -365,7 +367,7 @@ export default function CalendarPage() {
             <div className="flex justify-end p-4">
               <button
                 onClick={handleInputPage}
-                className="bg-orange-500 text-white font-semibold px-4 py-2 rounded shadow"
+                className="bg-[#F19209] text-white font-semibold px-4 py-2 rounded shadow"
               >
                 + 입력
               </button>
