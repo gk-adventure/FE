@@ -26,7 +26,6 @@ export default function CalendarPage() {
   });
   const [calendarData, setCalendarData] = useState({});
   const router = useRouter();
-  const API_BASE_URL = "http://54.180.125.184:8081";
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);
   const [isMonthOpen, setIsMonthOpen] = useState(false);

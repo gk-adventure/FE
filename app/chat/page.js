@@ -1,147 +1,89 @@
 "use client";
+
 import TopBar from "@/components/TopBar";
 import Navbar from "@/components/NavBar";
-
 import { useState } from "react";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
 
-  const quickReplies = [
-    "오늘 예산 알려줘.",
-    "금일 리포트 요약해줘.",
-    "이번 주 리포트 요약해줘.",
-    "이번 주 중에서 사용한 금액 알려줘.",
-  ];
-
-  const handleSend = () => {
-    const trimmed = inputText.trim();
+  const handleSend = async (text) => {
+    const trimmed = text.trim();
     if (!trimmed) return;
+
     setMessages((prev) => [...prev, { text: trimmed, type: "user" }]);
     setInputText("");
-  };
 
-  const handleQuickReply = (text) => {
-    setMessages((prev) => [...prev, { text, type: "user" }]);
+    try {
+      const chatbotResponse = await fetch("/api/transaction/chatbot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          userId: 1,
+          message: trimmed,
+        }),
+      });
+
+      if (!chatbotResponse.ok) throw new Error("챗봇 처리 실패");
+
+      const structuredData = await chatbotResponse.json();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: structuredData.message || "거래 내역이 저장되었습니다.",
+          type: "bot",
+        },
+      ]);
+    } catch (error) {
+      console.error("에러 발생:", error);
+      setMessages((prev) => [
+        ...prev,
+        { text: "⚠️ 처리 중 오류가 발생했습니다.", type: "bot" },
+      ]);
+    }
   };
 
   return (
     <>
       <TopBar />
-      <div
-        style={{
-          height: "100dvh",
-          backgroundColor: "#ffffff",
-          fontFamily: "'Noto Sans KR', sans-serif",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* 채팅 메시지 영역 */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            backgroundColor: "#F9F9F9",
-          }}
-        >
+      <div className="h-[100dvh] bg-white flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2 bg-[#F9F9F9]">
           {messages.map((msg, i) => (
             <div
               key={i}
-              style={{
-                alignSelf: msg.type === "user" ? "flex-end" : "flex-start",
-                backgroundColor: msg.type === "user" ? "#E5E5EA" : "#ffffff",
-                color: "#111",
-                padding: "10px 14px",
-                borderRadius: "16px",
-                maxWidth: "75%",
-                fontSize: "14px",
-                lineHeight: "1.4",
-                border: msg.type === "bot" ? "1px solid #eee" : "none",
-              }}
+              className={`${
+                msg.type === "user"
+                  ? "self-end bg-[#E5E5EA]"
+                  : "self-start bg-white border"
+              } text-[#111] px-4 py-2 rounded-2xl max-w-[75%] text-sm leading-relaxed`}
             >
               {msg.text}
             </div>
           ))}
         </div>
 
-        {/* 빠른 응답 버튼 */}
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "8px",
-            justifyContent: "center",
-            padding: "12px 16px",
-            backgroundColor: "#ffffff",
-            borderTop: "1px solid #f0f0f0",
-          }}
-        >
-          {quickReplies.map((text, i) => (
-            <button
-              key={i}
-              onClick={() => handleQuickReply(text)}
-              style={{
-                border: "1px solid #FF9900",
-                color: "#FF9900",
-                fontSize: "13px",
-                borderRadius: "20px",
-                padding: "8px 14px",
-                background: "white",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              {text}
-            </button>
-          ))}
-        </div>
-
-        {/* 입력창 */}
-        <div
-          style={{
-            display: "flex",
-            padding: "10px 16px",
-            borderTop: "1px solid #eee",
-            backgroundColor: "#ffffff",
-          }}
-        >
+        <div className="fixed bottom-14 left-0 w-full px-4 py-2 bg-white border-t flex items-center">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") handleSend();
+              if (e.key === "Enter") {
+                e.preventDefault(); // 기본 submit 방지
+                handleSend(inputText);
+              }
             }}
             placeholder="메시지를 입력하세요"
-            style={{
-              flex: 1,
-              padding: "12px 14px",
-              fontSize: "14px",
-              borderRadius: "20px",
-              border: "1px solid #ccc",
-              outline: "none",
-              backgroundColor: "#f8f8f8",
-            }}
+            className="flex-1 px-4 py-2 text-sm rounded-full border border-gray-300 bg-gray-100 outline-none"
           />
           <button
-            onClick={handleSend}
-            style={{
-              marginLeft: "8px",
-              backgroundColor: "#FF9900",
-              border: "none",
-              borderRadius: "50%",
-              width: "40px",
-              height: "40px",
-              color: "white",
-              fontSize: "18px",
-              cursor: "pointer",
-            }}
+            onClick={() => handleSend(inputText)}
+            className="ml-2 bg-[#FF9900] text-white w-10 h-10 rounded-full text-lg"
           >
             ➤
           </button>

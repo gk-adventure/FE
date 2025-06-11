@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 
-export default function WelcomePage() {
+export default function BudgetPage() {
   const [step, setStep] = useState(1);
   const [income, setIncome] = useState("");
   const [expenses, setExpenses] = useState([{ item: "", amount: "" }]);
   const [goalAmount, setGoalAmount] = useState("");
   const [goalPeriod, setGoalPeriod] = useState("");
+
+  const userId = 1;
 
   const handleAddExpense = () => {
     setExpenses([...expenses, { item: "", amount: "" }]);
@@ -23,47 +25,41 @@ export default function WelcomePage() {
     setExpenses(updated);
   };
 
-  const fetchBudgetCreate = async () => {
-    const fixedCosts = expenses
-      .filter((exp) => exp.item && exp.amount)
-      .map((exp) => ({
-        name: exp.item,
-        amount: Number(exp.amount),
-      }));
+  const handleSubmitBudget = async () => {
+    const startDate = new Date();
+    const startDateStr = startDate.toISOString().split("T")[0];
 
-    const body = {
-      userId: 1, // 실제 서비스에서는 로그인된 사용자 ID를 사용하세요.
-      startDate: new Date().toISOString().split("T")[0],
+    const fixedCosts = expenses
+      .filter((e) => e.item && e.amount)
+      .map((e) => ({ name: e.item, amount: Number(e.amount) }));
+
+    const payload = {
+      userId,
+      startDate: startDateStr,
       income: Number(income),
       goalAmount: Number(goalAmount),
-      goalPeriod: goalPeriod
-        ? new Date(
-            new Date().setMonth(new Date().getMonth() + Number(goalPeriod))
-          )
-            .toISOString()
-            .split("T")[0]
-        : null,
-      fixedCosts: fixedCosts,
+      goalPeriod,
+      fixedCosts,
     };
 
     try {
-      const res = await fetch("/api/budget/create", {
+      const res = await fetch(`/api/budget/create`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-      console.log(JSON.stringify(body));
       if (!res.ok) {
-        alert(data.message || "예산 등록 실패");
-        return;
+        const error = await res.json();
+        console.error("❌ 오류:", error);
+        throw new Error(error?.message || "예산 등록 실패");
       }
-    } catch (err) {
-      console.error(err);
-      alert("서버 오류 발생");
+
+      // ✅ 등록 성공 시 페이지 이동
+      router.push("/onboarding/analyze");
+    } catch (error) {
+      alert("❌ 예산 등록 중 오류 발생");
+      console.error(error);
     }
   };
 
@@ -92,62 +88,62 @@ export default function WelcomePage() {
           <h2 style={styles.planTitle}>한 달 예산 파악</h2>
 
           <div style={styles.qaBlock}>
-            <div style={styles.q}>Q. 한 달(30일) 수입이 얼마신가요?</div>
+            <div style={styles.q}>Q. 한 달 수입은 얼마인가요?</div>
             <div style={styles.a}>
-              A.{" "}
+              A:
               <input
                 type="number"
-                min="1"
-                placeholder="1원부터 입력 가능"
+                placeholder="예: 3000000"
                 value={income}
                 onChange={(e) => setIncome(e.target.value)}
                 style={styles.incomeInput}
-              />{" "}
-              원 이에요.
+              />
+              원
             </div>
           </div>
 
           <div style={styles.qaBlock}>
             <div style={styles.q}>Q. 고정 지출을 입력해주세요.</div>
-            <div style={styles.a}>A.</div>
-            <div style={styles.expenseList}>
-              {expenses.map((exp, i) => (
-                <div key={i} style={styles.expenseRow}>
-                  <input
-                    type="text"
-                    placeholder="항목명 (예: 넷플릭스)"
-                    value={exp.item}
-                    onChange={(e) => updateExpense(i, "item", e.target.value)}
-                    style={styles.expenseInput}
-                  />
-                  <input
-                    type="number"
-                    placeholder="금액"
-                    value={exp.amount}
-                    onChange={(e) => updateExpense(i, "amount", e.target.value)}
-                    style={styles.expenseInput}
-                  />
-                  <button
-                    style={styles.removeBtn}
-                    onClick={() => handleRemoveExpense(i)}
-                  >
-                    ❌
-                  </button>
-                </div>
-              ))}
-            </div>
+            <div className="a">A.</div>
+            {expenses.map((exp, i) => (
+              <div key={i} style={styles.expenseRow}>
+                <input
+                  type="text"
+                  placeholder="예: 월세"
+                  value={exp.item}
+                  onChange={(e) => updateExpense(i, "item", e.target.value)}
+                  style={styles.expenseInput}
+                />
+                <input
+                  type="number"
+                  placeholder="금액"
+                  value={exp.amount}
+                  onChange={(e) => updateExpense(i, "amount", e.target.value)}
+                  style={styles.expenseInput}
+                />
+                <button
+                  onClick={() => handleRemoveExpense(i)}
+                  style={styles.removeBtn}
+                >
+                  ❌
+                </button>
+              </div>
+            ))}
             <div style={styles.addItem} onClick={handleAddExpense}>
               + 항목 추가
             </div>
+          </div>
 
-            <div style={styles.bottomNav}>
-              <button style={styles.prevBtn} onClick={() => setStep(1)}>
-                ← 이전
-              </button>
-              <button style={styles.nextBtn} onClick={() => setStep(3)}>
-                다음 &gt;
-              </button>
-            </div>
+          <div style={styles.bottomNav}>
+            <button style={styles.prevBtn} onClick={() => setStep(1)}>
+              ← 이전
+            </button>
+            <button
+              style={{ ...styles.nextBtn, backgroundColor: primary }}
+              onClick={() => setStep(3)}
+            >
+              다음 &gt;
+            </button>
           </div>
         </div>
       )}
@@ -155,39 +151,33 @@ export default function WelcomePage() {
       {step === 3 && (
         <div style={styles.planWrap}>
           <div style={styles.progress}>● ● ● ● ●</div>
-          <h2 style={styles.planTitle}>저축 목표 금액</h2>
+          <h2 style={styles.planTitle}>저축 목표 설정</h2>
 
           <div style={styles.qaBlock}>
-            <div style={styles.q}>
-              Q. <strong>저축 목표 금액이 얼마인가요?</strong>
-            </div>
+            <div style={styles.q}>Q. 목표 금액은 얼마인가요?</div>
             <div style={styles.a}>
-              A.
+              A:
               <input
                 type="number"
-                placeholder="1원부터 입력 가능"
                 value={goalAmount}
                 onChange={(e) => setGoalAmount(e.target.value)}
                 style={styles.goalInput}
               />
-              원 이에요!
+              원
             </div>
           </div>
 
           <div style={styles.qaBlock}>
-            <div style={styles.q}>
-              Q. <strong>저축 목표 기간이 얼마인가요?</strong>
-            </div>
+            <div style={styles.q}>Q. 언제까지 모으고 싶으신가요?</div>
             <div style={styles.a}>
-              A.
+              A:
               <input
-                type="number"
-                placeholder="1개월 부터 입력 가능"
+                type="date"
                 value={goalPeriod}
                 onChange={(e) => setGoalPeriod(e.target.value)}
                 style={styles.goalInput}
               />
-              개월 이에요!
+              까지!
             </div>
           </div>
 
@@ -195,10 +185,11 @@ export default function WelcomePage() {
             <button style={styles.prevBtn} onClick={() => setStep(2)}>
               ← 이전
             </button>
-            <button style={styles.nextBtn} onClick={fetchBudgetCreate}>
-              다음 &gt;
-              <br />
-              <small>분석하기</small>
+            <button
+              style={{ ...styles.nextBtn, backgroundColor: primary }}
+              onClick={handleSubmitBudget}
+            >
+              분석하기 &gt;
             </button>
           </div>
         </div>
@@ -207,22 +198,22 @@ export default function WelcomePage() {
   );
 }
 
-const green = "#30b769";
+// 스타일 정의 (생략 가능)
+const primary = "#F19209";
+const secondary = "#ff6900";
+
 const styles = {
   container: {
-    boxSizing: "border-box",
     padding: "2rem 1rem",
     fontFamily: "sans-serif",
     color: "#333",
     backgroundColor: "#fff",
     minHeight: "100vh",
     maxWidth: "480px",
-    width: "100%",
     margin: "0 auto",
   },
   character: {
     fontSize: "3rem",
-    alignSelf: "flex-end",
     marginBottom: "1rem",
   },
   welcomeText: {
@@ -230,26 +221,20 @@ const styles = {
     lineHeight: "1.6",
     marginBottom: "1.2rem",
   },
-  highlight: {
-    color: green,
-    fontWeight: "bold",
-  },
+  highlight: { color: secondary, fontWeight: "bold" },
   subText: {
     fontSize: "1rem",
     fontWeight: "bold",
     marginBottom: "2rem",
   },
   button: {
-    backgroundColor: green,
+    backgroundColor: primary,
     color: "#fff",
     border: "none",
     padding: "0.9rem 1.4rem",
     fontSize: "1rem",
     borderRadius: "1.5rem",
-    boxShadow: "0 4px 8px rgba(0,0,0,0.15)",
     cursor: "pointer",
-    minWidth: "160px",
-    textAlign: "center",
   },
   dot1: {
     position: "absolute",
@@ -257,7 +242,7 @@ const styles = {
     left: "10%",
     width: "10px",
     height: "10px",
-    backgroundColor: "#e1f3e5",
+    backgroundColor: "#fef3e0",
     borderRadius: "50%",
   },
   dot2: {
@@ -266,16 +251,14 @@ const styles = {
     left: "15%",
     width: "24px",
     height: "24px",
-    backgroundColor: "#e1f3e5",
+    backgroundColor: "#fef3e0",
     borderRadius: "50%",
   },
   planWrap: { marginTop: "2rem" },
   progress: {
     textAlign: "center",
     marginBottom: "1rem",
-    color: green,
-    fontSize: "0.8rem",
-    width: "100%",
+    color: secondary,
   },
   planTitle: {
     textAlign: "center",
@@ -284,49 +267,39 @@ const styles = {
     marginBottom: "2rem",
   },
   qaBlock: { marginBottom: "2rem" },
-  q: { color: "#f79a1f", fontWeight: "bold", marginBottom: "0.5rem" },
+  q: { color: secondary, fontWeight: "bold", marginBottom: "0.5rem" },
   a: {
-    marginBottom: "0.8rem",
-    fontWeight: "bold",
     display: "flex",
     alignItems: "center",
     gap: "0.5rem",
     flexWrap: "wrap",
+    fontWeight: "bold",
+    marginBottom: "0.8rem",
   },
   incomeInput: {
     border: "none",
-    borderBottom: `2px solid ${green}`,
+    borderBottom: `2px solid ${primary}`,
     padding: "0.4rem",
     width: "60%",
     fontSize: "1rem",
-    margin: "0 0.5rem",
     outline: "none",
-    maxWidth: "100%",
   },
   goalInput: {
     border: "none",
-    borderBottom: `2px solid ${green}`,
+    borderBottom: `2px solid ${primary}`,
     padding: "0.6rem",
     fontSize: "1.1rem",
     outline: "none",
-    color: "#333",
     flex: 1,
-  },
-  expenseList: {
-    overflowX: "auto",
-    width: "100%",
   },
   expenseRow: {
     display: "flex",
     gap: "0.5rem",
     alignItems: "center",
     marginBottom: "0.5rem",
-    flexWrap: "wrap",
   },
   expenseInput: {
-    flex: "1 1 100px",
-    minWidth: "120px",
-    boxSizing: "border-box",
+    flex: "1",
     border: "1px solid #ccc",
     padding: "0.6rem 0.8rem",
     borderRadius: "8px",
@@ -338,15 +311,10 @@ const styles = {
     border: "none",
     color: "#e74c3c",
     fontSize: "1.5rem",
-    lineHeight: 1,
-    fontFamily: "sans-serif",
-    minWidth: "32px",
-    textAlign: "center",
     cursor: "pointer",
-    flexShrink: 0,
   },
   addItem: {
-    color: green,
+    color: primary,
     fontSize: "0.9rem",
     cursor: "pointer",
     marginTop: "0.5rem",
@@ -354,15 +322,13 @@ const styles = {
   bottomNav: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
     marginTop: "2rem",
-    flexWrap: "wrap",
-    gap: "0.5rem",
+    gap: "1rem",
   },
   prevBtn: {
     background: "none",
     border: "none",
-    color: "#f79a1f",
+    color: secondary,
     fontWeight: "bold",
     fontSize: "1rem",
     cursor: "pointer",
